@@ -25,7 +25,7 @@
 import Foundation
 
 
-public protocol APIDecoder: class {
+public protocol APIDecoder: AnyObject {
     var node: JSONNode? { get }
     var codingKey: CodingKey { get }
     var codingPath: [CodingKey] { get }
