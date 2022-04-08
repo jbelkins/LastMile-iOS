@@ -12,7 +12,7 @@ jobs:
           command: gem install -N xcpretty
       - run:
           name: Run Tests
-          command: xcodebuild -scheme LastMileUnitTests -destination "platform=macOS" test 2>&1 | xcpretty --simple -r junit
+          command: swift test --skip LastMilePerformanceTests test 2>&1 | xcpretty --simple -r junit
       - store_test_results:
           path: build/reports/
           destination: junit
