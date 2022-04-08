@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name                  = "LastMile"
-  spec.version               = "0.1.2"
+  spec.version               = "1.0.0"
   spec.summary               = "Decodes data encoded in JSON to Swift objects"
   spec.description           = <<-DESC
     Decodes JSON into objects, with simple, elegant syntax, flexible and resilient parsing, and insightful error reporting.
