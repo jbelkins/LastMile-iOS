@@ -17,6 +17,19 @@ LastMile aims exclusively to tackle the problem of building model objects from y
 ## Using LastMile
 (See test file [PersonTests.swift](https://github.com/jbelkins/LastMile-iOS/blob/master/LastMileTests/PersonTests.swift) in the project to see this demo code in operation.)
 
+### With Cocoapods
+Add it to your `Podfile`:
+```
+  pod 'LastMile'
+```
+
+### With Swift Package Manager
+Add it to your `Package.swift` or to your Xcode project's Package Dependencies:
+```
+  .package("LastMile", url: "https://github.com/jbelkins/LastMile-iOS", version: "1.0.0")
+```
+
+### Code
 Here is a sample model object:
 
     struct Person {
