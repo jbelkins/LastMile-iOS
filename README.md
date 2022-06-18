@@ -1,21 +1,30 @@
 # LastMile [![CircleCI](https://circleci.com/gh/jbelkins/LastMile-iOS.svg?style=shield)](https://circleci.com/gh/jbelkins/LastMile-iOS)
 Robust decoding of model objects, tailored for use with JSON APIs
 
-- Type-safe access to JSON from Swift
-- Simple, clean syntax for decoding model objects
-- Collects errors detailing abnormalities in the received JSON
+- Type-safe, easy access to JSON from Swift
+- Simple, clean, safe syntax for initializing model objects
+- Collects errors detailing abnormalities in JSON
 - Built-in decoding for common Swift types
 
 ## LastMile vs. Swift Codable
-LastMile aims exclusively to tackle the problem of building model objects from your API's JSON easily and consistently.  LastMile's not a substitute for Swift Codable, nor is Swift Codable a substitute for LastMile.  Rather, the two can be used side-by-side on the same model objects but for different purposes.
+LastMile aims to tackle these important problems in decoding API JSON responses, which are weaknesses of decoding with Swift Codable:
+- Building model objects easily, safely, and consistently from JSON that does not match the structure of models
+- Salvaging as much data as possible when a decoding error occurs
+- Generating rich error information that allows the developer to immediately pinpoint problems in either the data model or data itself
 
-- _Harmonious coexistence._ You can use LastMile and Swift Codable independently on the same type.  Using LastMile for decoding API responses allows you to use Codable exclusively for internal serialization needs, resulting in cleaner, simpler, more focused code.
-- _Flexibility._ LastMile reaches through multiple levels of JSON effortlessly.  If you need to reach deep into nested JSON to get `["items"][0]["values"][0]["name"]`, just say so.  Swift Decodable excels at decoding data that Swift encoded with Encodable on the same type, but it's not suited to pick values out of JSON that doesn't match the structure of your internal models. 
-- _Resilience._ Swift Decodable throws an error and quits decoding when it hits an unexpected value, because such errors are unlikely when decoding data that was encoded internally.  LastMile keeps on decoding past the error, returning whatever it can salvage from JSON that has missing or mistyped fields.  If you decode an array of 100 values and one is malformed, LastMile will give you an array with the other 99 plus error objects describing why that bad element failed.  Codable will throw an error and return no part of the response.
-- _Accountability._ LastMile makes a note of everything that is unexpectedly missing or in a different type than expected in your API response, and returns a list of everything wrong in the form of a collection of error objects, whether or not a response is returned.  The info from error objects can cut hours off of debugging and production downtime by leading you to the problem faster.  By contrast, Swift Decodable will give you one error per API response: the one that made it quit decoding.
+Continue to use Codable for internal serialization/deserialization, the role at which it is best suited, and use LastMile to create models from JSON received over the API.
+
+LastMile decoding is different from Swift Codable decoding in these important ways:
+- LastMile decoding can still succeed even if there are errors encountered while decoding the JSON.
+- LastMile can return multiple errors for a single decoding operation.
+- LastMile salvages and returns whatever it can when a decoding error occurs, while Swift Codable fails immediately.
+
+Things LastMile gives you that Swift Codable doesn't:
+- _Flexibility._ LastMile reaches through multiple levels of JSON effortlessly, so you can build model objects whose structure doesn't closely mirror the JSON.  If you need to reach deep into nested JSON to get `response["items"][0]["values"][0]["name"]`, for instance, just say so.  Swift Decodable isn't suited to pick values out of JSON that doesn't match the structure of your internal models. 
+- _Resilience._ Swift Decodable throws an error and quits decoding when it hits an unexpected type or unexpectedly missing value.  LastMile keeps on decoding past the error, returning whatever it can salvage from JSON that has missing or mistyped fields.  If you decode an array of 100 values and one is malformed, LastMile will still give you an array with the other 99 plus an error object describing why that bad element failed to decode.  Codable will throw an error and return no part of the response.
+- _Visibility._ LastMile makes a note of everything that is unexpectedly missing or in a different type than expected in your API response, and returns a list of everything wrong in the form of a collection of error objects, whether or not decoding is successful.  You can take these errors and record them in the crash / error reporting software of your choice.  The info from error objects can cut hours off of debugging and production downtime by leading you to the exact problem immediately.  By contrast, Swift Decodable will throw as soon as it encounters one error and dispose of everything it has decoded so far.
 
 ## Using LastMile
-(See test file [PersonTests.swift](https://github.com/jbelkins/LastMile-iOS/blob/master/LastMileTests/PersonTests.swift) in the project to see this demo code in operation.)
 
 ### With Cocoapods
 Add it to your `Podfile`:
@@ -50,7 +59,9 @@ Here is the JSON we will decode this object from:
         "person_id": 8675309,
         "first_name": "Mary",
         "last_name": "Smith",
-        "phone_number": "(312) 555-1212",
+        "contact_info": {
+	        "phone_number": "(312) 555-1212"
+    	},
         "height": "really tall"
     }
 
@@ -63,13 +74,13 @@ And here is an `APIDecodable` extension for `Person` that will create a new inst
 
 	    init?(from decoder: APIDecoder) {
 	        // 1a
-	        let id =          decoder["person_id"]    --> Int.self
-	        let firstName =   decoder["first_name"]   --> String.self
-	        let lastName =    decoder["last_name"]    --> String.self
+	        let id =          decoder["person_id"]                    --> Int.self
+	        let firstName =   decoder["first_name"]                   --> String.self
+	        let lastName =    decoder["last_name"]                    --> String.self
 
 	        // 1b
-	        let phoneNumber = decoder["phone_number"] --> String?.self
-	        let height =      decoder["height"]       --> Double?.self
+	        let phoneNumber = decoder["contact_info"]["phone_number"] --> String?.self
+	        let height =      decoder["height"]                       --> Double?.self
 
 	        // 2
 	        guard decoder.succeeded else { return nil }
@@ -81,13 +92,15 @@ And here is an `APIDecodable` extension for `Person` that will create a new inst
 
 There are three steps to this initializer:
 
-1) The decoder is used to create all of the values required to initialize a `DemoStruct`.  Using one or more subscripts on the parser lets you safely access JSON subelements, then you use the `-->` operator with either a type that is (1a) `APIDecodable` or (1b) an optional `APIDecodable`.
+1) The decoder is used to create all of the values required to initialize a `DemoStruct`.  Using one or more subscripts on the decoder lets you safely access JSON subelements, then you use the `-->` operator with either a type that is (1a) `APIDecodable` or (1b) an optional `APIDecodable`.
 
 2) The initializer fails by returning `nil` if `decoder.succeeded` is false.  This will happen whenever any non-optional value is not present.
 
-3) Finally, the structure is initialized by calling the memberwise initializer.  Required values `id`, `firstName`, and `lastName` may be force-unwrapped safely if `decoder.succeeded` was true.
+3) Finally, the structure is initialized by calling the memberwise initializer.  Required values `id`, `firstName`, and `lastName` may be force-unwrapped safely since `decoder.succeeded` was true.
 
-Since the value for `"height"` in the JSON above was unexpectedly a String instead of a number, an error object will be generated describing the problem and its location.
+(The `static var idKey: String?` declaration helps to identify the specific data record that caused a decoding error.)
+
+Since the value for `"height"` in the JSON above was unexpectedly a String instead of a number, an error object will be generated describing the problem and its location.  The error is stored in the `decoder` and may be accessed after decoding completes.
 
 ## Decoding
 
@@ -97,6 +110,8 @@ To decode a `Person` from a data object containing JSON received by HTTP:
     print(decodeResult.value ?? "nil")
     // prints:
     // Person(id: 8675309, firstName: "Mary", lastName: "Smith", phoneNumber: Optional("(312) 555-1212"), height: nil)
+
+To see the errors generated while decoding:
 
     decodeResult.errors.forEach { print($0) }
     // prints:
