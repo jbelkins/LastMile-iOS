@@ -6,59 +6,84 @@ import LastMile
 // https://github.com/jbelkins/LastMile-iOS
 
 
-// For this playground to run correctly on Xcode 12,
-// select the "LastMile" scheme,
-// then press the playground's Run button.
+// This code example is discussed in this project's README file.
+// See the discussion there for more info.
 
-struct Record {
+
+struct Person {
     let id: Int
     let firstName: String
-    let lastName: String?
+    let lastName: String
+    let phoneNumber: String?
+    let height: Double?
 }
 
 
-extension Record: APIDecodable {
+extension Person: APIDecodable {
+    static var idKey: String? { return "person_id" }
 
     init?(from decoder: APIDecoder) {
-        let id = decoder["id"] --> Int.self
-        let firstName = decoder["first_name"] --> String.self
-        let lastName = decoder["last_name"] --> String?.self
+        // Decode the required values into variables
+        let id =          decoder["person_id"]                    --> Int.self
+        let firstName =   decoder["first_name"]                   --> String.self
+        let lastName =    decoder["last_name"]                    --> String.self
+
+        // Decode the optional values into variables
+        let phoneNumber = decoder["contact_info"]["phone_number"] --> String?.self
+        let height =      decoder["height"]                       --> Double?.self
+
+        // Check to see if all required values were able to be decoded, fail initializer if not
         guard decoder.succeeded else { return nil }
-        self.init(id: id!, firstName: firstName!, lastName: lastName)
+
+        // Delegate to memberwise initializer to finish initialization
+        self.init(id: id!, firstName: firstName!, lastName: lastName!, phoneNumber: phoneNumber, height: height)
     }
 }
 
+
 let validJSONObject: [String: Any] = [
-    "id": 123,
+    "person_id": 8675309,
     "first_name": "Mary",
-    "last_name": "Smith"
+    "last_name": "Smith",
+    "contact_info": [
+        "phone_number": "(312) 555-1212"
+    ],
+    "height": 72.5
 ]
 
-tryParsing(name: "Valid", object: validJSONObject)
+tryDecoding(name: "Valid", object: validJSONObject)
 
 
 let validWithErrorJSONObject: [String: Any] = [
-    "id": 123,
+    "person_id": 8675309,
     "first_name": "Mary",
-    "last_name": 456        // Last name is expected to be a String
+    "last_name": 456,           // Last name is expected to be a String
+    "contact_info": [
+        "phone_number": "(312) 555-1212"
+    ],
+    "height": 72.5
 ]
 
-tryParsing(name: "Valid, but with 1 error", object: validWithErrorJSONObject)
+tryDecoding(name: "Valid, but with 1 error", object: validWithErrorJSONObject)
 
 
 let invalidJSONObject: [String: Any] = [
-    "id": 123.4,  // id is expected to be an Int
+    "person_id": 123.4,         // id is expected to be an Int
     // First name is a required field and is missing
-    "last_name": "Jones"
+    "last_name": "Smith",
+    "contact_info": [
+        "phone_number": "(312) 555-1212"
+    ],
+    "height": 72.5
 ]
 
-tryParsing(name: "Invalid, with 2 errors", object: invalidJSONObject)
+tryDecoding(name: "Invalid, with 2 errors", object: invalidJSONObject)
 
 
 // Helper method
-func tryParsing(name: String, object: Any) {
+func tryDecoding(name: String, object: Any) {
     let data = try! JSONSerialization.data(withJSONObject: object)
-    let result = APIDataDecoder().decode(data: data, to: Record.self)
+    let result = APIDataDecoder().decode(data: data, to: Person.self)
 
     print("~~~~~~~~~~~~~~~ \(name) ~~~~~~~~~~~~~~~")
     if let record = result.value {
@@ -66,7 +91,11 @@ func tryParsing(name: String, object: Any) {
     } else {
         print("Nil record")
     }
-    print("Errors: \(result.errors)")
+    if result.errors.count > 0 {
+        print("Errors:\n  \(result.errors.map(\.description).joined(separator: "\n  "))")
+    } else {
+        print("No errors")
+    }
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print()
     print()

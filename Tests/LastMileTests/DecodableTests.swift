@@ -54,7 +54,16 @@ class DecodableTests: XCTestCase {
             let valyews: [String: UInt8]
         }
 
-        let jsonObject: [String : Any] = ["id": 123, "name": "xyz", "address": "abc", "intOrNot": NSNull(), "itsTrue": true, "itsFalse": false, "numbahs": [8, 6, 7, 5, 3, 0, 9], "valyews": ["wun": 1, "tyew": 2, "big": 255]]
+        let jsonObject: [String : Any] = [
+            "id": 123,
+            "name": "xyz",
+            "address": "abc",
+            "intOrNot": NSNull(),
+            "itsTrue": true,
+            "itsFalse": false,
+            "numbahs": [8, 6, 7, 5, 3, 0, 9],
+            "valyews": ["wun": 1, "tyew": 2, "big": 255]
+        ]
         let data = try! JSONSerialization.data(withJSONObject: jsonObject, options: [])
         compareResults(data: data, outputType: SampleCodableData.self)
     }
