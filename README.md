@@ -30,6 +30,8 @@ Add it to your `Package.swift` or to your Xcode project's Package Dependencies:
 ```
 
 ### Code
+_Note that this code is also demo'd in the Swift Playground included in this project._
+
 Here is a sample model object:
 
     struct Person {
